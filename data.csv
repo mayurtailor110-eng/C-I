@@ -1,0 +1,40 @@
+Section,Category,Parameter,Unit,NETC,Rising Power,Cospower
+Technical,DC Parameters of battery system,Cell Specifications,Ah,LFP 314,,LFP314
+Technical,DC Parameters of battery system,Battery configuration,-,1P260S,,
+Technical,DC Parameters of battery system,Battery capacity,KWh,261,,261
+Technical,DC Parameters of battery system,Operating Voltage range,V,728 - 936,,650-1000
+Technical,DC Parameters of battery system,chare - discharge rate,P,≤0.5,,
+Technical,DC Parameters of battery system,Battery Cooling method,-,Liquid Cooling,,Liquid Cooling
+Technical,DC Parameters of battery system,Fire protection system configuration,-,"Three - in - one Composite(CO,temperature,smoke) & PACK (aerosol)",,Perfluorohexanone/aerosol
+Technical,PCS - DC Side,Voltage range,V,600 - 1000,,
+Technical,PCS - DC Side,DC bus,-,1,,
+Technical,PCS - DC Side,Maximum Current,Amps,198,,
+Technical,PCS - AC side,Rated Power,KW,"125 (1.1 times overload for long-term , 1.2 times for 1 mint)",,
+Technical,PCS - AC side,Rated Voltage,V,400 (±15%),,
+Technical,PCS - AC side,Rated Current,Amps,180,,
+Technical,PCS - AC side,Power factor,-,- 0.99 to 0.99,,
+Technical,PCS - AC side,Wiring configuration,-,Three-phase Four-wire,,
+Technical,PCS - AC side,Cooling method,-,Forced Air cooling,,
+Technical,PCS - AC side,Rated grid frequency,Hz,50/60,,
+Technical,Basic Parameters,Working Temperature,°C,-20 to 55,,
+Technical,Basic Parameters,Storage Temperature,°C,-20 to 45,,
+Technical,Basic Parameters,Relative Humidity,%,5 to 95,,
+Technical,Basic Parameters,Working Altitude,m,2000 (Derating start above 2000),,
+Technical,Basic Parameters,Noise,db,≤75,,
+Technical,Basic Parameters,Communicarion Protocol,-,"Modbus, CAN 2.0",,
+Technical,Basic Parameters,Communication Method,-,"CAN, RS485, LAN",,
+Technical,Basic Parameters,Protection rating,-,IP54,,
+Technical,Basic Parameters,Energy Efficiemcy Ration (RTE),%,≥88,,
+Technical,Basic Parameters,Dimensions,(WXDXH) mm,1020*1302*2460,,
+Technical,Basic Parameters,Weight,Kg,2800,,
+Technical,Basic Parameters,Execution Standard,-,,,
+Component,Component Makes,Cell,,,Hithium,Cospower
+Component,Component Makes,BMU,,,GOLD or BMSER,Kgooer
+Component,Component Makes,BCMU,,,GOLD or BMSER,Kgooer
+Component,Component Makes,BAU,,,GOLD or BMSER,Kgooer
+Component,Component Makes,PCS,,,Enjoy,GSSTES
+Component,Component Makes,Chiller,,,Tongfei/Envicool,HAIWU
+Component,Component Makes,FSS,,,JAD/Fuji/CFLC,JINGTONG
+Component,Component Makes,De-humidifier ,,,,
+Component,Component Makes,Aerosol  cylinder,,,JAD/Fuji/CFLC,
+Component,Component Makes,EMS,,,,Cospower
