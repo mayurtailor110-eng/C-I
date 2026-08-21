@@ -154,14 +154,20 @@
     </div>
     <div class="grid-2">
       <div class="panel">
-        <h2>Data completeness by vendor</h2>
-        <div class="chart-box"><canvas id="completeChart"></canvas></div>
+        <h2>Technical specs completeness</h2>
+        <p class="hint">Filled vs blank across the technical parameters only.</p>
+        <div class="chart-box"><canvas id="techCompleteChart"></canvas></div>
       </div>
       <div class="panel">
-        <h2>Component coverage</h2>
-        <p class="hint">Which of the 10 major components each vendor has a declared make for.</p>
-        <div class="chart-box"><canvas id="componentChart"></canvas></div>
+        <h2>Component makes completeness</h2>
+        <p class="hint">Filled vs blank across the 10 major components only.</p>
+        <div class="chart-box"><canvas id="compCompleteChart"></canvas></div>
       </div>
+    </div>
+    <div class="panel">
+      <h2>Component coverage</h2>
+      <p class="hint">How many of the 10 major components each vendor has a declared make for.</p>
+      <div class="chart-box"><canvas id="componentChart"></canvas></div>
     </div>
   </div>
 
@@ -301,7 +307,8 @@ function showError(msg){
 function render(){
   buildKPIs();
   buildScorecard();
-  buildCompletenessChart();
+  buildTechCompleteChart();
+  buildCompCompleteChart();
   buildComponentChart();
   buildComponentTable();
   buildTechTable();
@@ -310,10 +317,12 @@ function render(){
 }
 
 /* ---------- completeness helpers ---------- */
-function completeness(){
+// section: "Technical" | "Component" | undefined (=all)
+function completeness(section){
   const stat = {};
   VENDORS.forEach(v=>stat[v]={filled:0,total:0});
   DATA.forEach(row=>{
+    if(section && row.Section!==section) return;
     VENDORS.forEach(v=>{
       stat[v].total++;
       if(!isBlank(row[v])) stat[v].filled++;
@@ -367,11 +376,13 @@ function destroy(id){ if(charts[id]){charts[id].destroy(); delete charts[id];} }
 function axisColor(){ return getComputedStyle(document.body).getPropertyValue('--ink-dim').trim(); }
 function gridColor(){ return getComputedStyle(document.body).getPropertyValue('--line').trim(); }
 
-function buildCompletenessChart(){
-  destroy('complete');
-  const stat=completeness();
-  const ctx=document.getElementById('completeChart');
-  charts.complete=new Chart(ctx,{
+function completenessChart(canvasId, chartKey, section){
+  destroy(chartKey);
+  const stat=completeness(section);
+  const ctx=document.getElementById(canvasId);
+  if(!ctx) return;
+  const total = VENDORS.length ? (stat[VENDORS[0]].total||0) : 0;
+  charts[chartKey]=new Chart(ctx,{
     type:'bar',
     data:{labels:VENDORS,
       datasets:[
@@ -379,11 +390,22 @@ function buildCompletenessChart(){
         {label:'To confirm',data:VENDORS.map(v=>stat[v].total-stat[v].filled),backgroundColor:'rgba(140,160,180,.22)',borderRadius:6,stack:'s'}
       ]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:axisColor()}}},
+      plugins:{
+        legend:{labels:{color:axisColor()}},
+        tooltip:{callbacks:{
+          afterBody:(items)=>{
+            const v=items[0].label;
+            return `${stat[v].filled} of ${stat[v].total} filled`;
+          }
+        }}
+      },
       scales:{x:{stacked:true,ticks:{color:axisColor()},grid:{color:gridColor()}},
-              y:{stacked:true,ticks:{color:axisColor()},grid:{color:gridColor()}}}}
+              y:{stacked:true,beginAtZero:true,max: total||undefined,
+                 ticks:{color:axisColor(),precision:0},grid:{color:gridColor()}}}}
   });
 }
+function buildTechCompleteChart(){ completenessChart('techCompleteChart','techComplete','Technical'); }
+function buildCompCompleteChart(){ completenessChart('compCompleteChart','compComplete','Component'); }
 
 function buildComponentChart(){
   destroy('component');
@@ -487,7 +509,7 @@ document.getElementById('printBtn').onclick=()=>window.print();
 /* re-theme charts on color-scheme change */
 if(window.matchMedia){
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{
-    if(DATA.length){buildCompletenessChart();buildComponentChart();}
+    if(DATA.length){buildTechCompleteChart();buildCompCompleteChart();buildComponentChart();}
   });
 }
 
