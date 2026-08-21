@@ -1,46 +1,11 @@
-﻿Category,Parameter,Unit,NETC,Rising Power,Cospower,Remarks
-DC Parameters of battery system,Cell Specifications,Ah,LFP 314,,LFP314,
-DC Parameters of battery system,Battery configuration,-,1P260S,,1P260S,
-DC Parameters of battery system,Battery capacity,KWh,261,,261,
-DC Parameters of battery system,Operating Voltage range,V,728 - 936,,650-1000,
-DC Parameters of battery system,charge - discharge rate,P,≤0.5,,≤0.5,
-DC Parameters of battery system,Battery Cooling method,-,Liquid Cooling,,Liquid Cooling,
-DC Parameters of battery system,Fire protection system configuration,-,"Three - in - one Composite(CO,temperature,smoke) & PACK (aerosol)",,Perfluorohexanone/aerosol,
-PCS - DC Side,Voltage range,V,600 - 1000,,650-1000,
-PCS - DC Side,DC bus,-,1,,1,
-PCS - DC Side,Maximum Current,Amps,198,,191,
-PCS - AC side,Rated Power,KW,"125 (1.1 times overload for long-term , 1.2 times for 1 mint)",,130,
-PCS - AC side,Rated Voltage,V,400 (±15%),,230/400,
-PCS - AC side,Rated Current,Amps,180,,216,
-PCS - AC side,Power factor,-,- 0.99 to 0.99,,- 0.99 to 0.99,
-PCS - AC side,Wiring configuration,-,Three-phase Four-wire,,Three-phase Four-wire,
-PCS - AC side,Cooling method,-,Forced Air cooling,,Forced Air cooling,
-PCS - AC side,Rated grid frequency,Hz,50/60,,50/60,
-Basic Parameters,Working Temperature,°C,-20 to 55,,-20 to 55,
-Basic Parameters,Storage Temperature,°C,-20 to 45,,-20 to 45,
-Basic Parameters,Relative Humidity,%,5 to 95,,5 to 95,
-Basic Parameters,Working Altitude,m,2000 (Derating start above 2000),,2000 (Derating start above 2000),
-Basic Parameters,Noise,db,≤75,,≤75,
-Basic Parameters,Communicarion Protocol,-,"Modbus, CAN 2.0",,"Modbus, CAN 2.0",
-Basic Parameters,Communication Method,-,"CAN, RS485, LAN",,"CAN, RS485, LAN",
-Basic Parameters,Protection rating,-,IP54,,IP54,
-Basic Parameters,Energy Efficiemcy Ration (RTE),%,≥88,,≥88,
-Basic Parameters,Dimensions,(WXDXH) mm,1020*1302*2460,,1100*1350*2350,
-Basic Parameters,Weight,Kg,2800,,2900,
-Energy / Capacity,Nameplate Energy,kWh,,,,
-Energy / Capacity,Usable Energy (BOL),kWh,,,,
-Energy / Capacity,"Cycle Life (@ DoD, cycles)",cycles,,,,
-Energy / Capacity,Design Life,years,,,,
-Energy / Capacity,Augmentation included (Y/N),-,,,,
-Warranty,Warranty Period,years,,,,
-Warranty,Throughput Warranty,MWh,,,,
-Warranty,Guaranteed EOL Capacity,%,,,,
-Certifications,UL 9540A (cell/module/unit),-,,,,
-Certifications,IEC 62619,-,,,,
-Certifications,NFPA 855 / Fire compliance,-,,,,
-Certifications,Grid Code / IEC 62477 (PCS),-,,,,
-Commercial,Ex-works Price,₹ / Unit,,,,
-Commercial,Price per usable kWh,₹ / kWh,,,,
-Commercial,O&M / AMC per year,₹ / year,,,,
-Commercial,Delivery Lead Time,weeks,,,,
-Commercial,Country of Manufacture,-,,,,
+﻿Sr No,Component,NETC – Make,Rising Power – Make,Cospower – Make
+1,Cell,,Hithium,Cospower
+2,BMU,,GOLD or BMSER,Kgooer
+3,BCMU,,GOLD or BMSER,Kgooer
+4,BAU,,GOLD or BMSER,Kgooer
+5,PCS,,Enjoy,GSSTES
+6,Chiller,,Tongfei/Envicool,HAIWU
+7,FSS,,JAD/Fuji/CFLC,JINGTONG
+8,De-humidifier,,,
+9,Aerosol cylinder,,JAD/Fuji/CFLC,
+10,EMS,,,Cospower
