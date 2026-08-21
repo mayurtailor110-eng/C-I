@@ -201,28 +201,48 @@
 </div>
 
 <script>
-const VENDORS = ["NETC","Rising Power","Cospower"];
-const VCOLORS  = {"NETC":"#3fb6a8","Rising Power":"#6c8cff","Cospower":"#f2a43a"};
+const VENDORS = ["NETC","Rising Power","Cospower","Hithium"];
+const VCOLORS  = {"NETC":"#3fb6a8","Rising Power":"#6c8cff","Cospower":"#f2a43a","Hithium":"#e5734f"};
 let DATA = [];
+let COMP_EXTRA = [];
 let charts = {};
 
 function isBlank(v){ return v===undefined || v===null || String(v).trim()===""; }
 
+function parseCSV(url){
+  return new Promise((resolve,reject)=>{
+    Papa.parse(url,{download:true,header:true,skipEmptyLines:true,
+      complete:res=>resolve(res.data.map(r=>{
+        const o={};Object.keys(r).forEach(k=>o[k.trim()]=(r[k]==null?"":String(r[k]).trim()));return o;
+      })),
+      error:err=>reject(err)
+    });
+  });
+}
+
 function loadData(){
-  Papa.parse("data.csv", {
-    download:true, header:true, skipEmptyLines:true,
-    complete:(res)=>{
-      if(!res.data || !res.data.length){ showError("data.csv is empty or unreadable."); return; }
-      DATA = res.data.map(r=>{
-        const o={};
-        Object.keys(r).forEach(k=>o[k.trim()] = (r[k]==null?"":String(r[k]).trim()));
-        return o;
-      });
+  Promise.all([ parseCSV("technical.csv"), parseCSV("component.csv") ])
+    .then(([tech, comp])=>{
+      // Normalise both files into one internal shape the rest of the app uses.
+      const rows=[];
+      tech.forEach(r=>rows.push({
+        Section:"Technical", Category:r.Category||"", Parameter:r.Parameter||"",
+        Unit:r.Unit||"", "NETC":r.NETC||"", "Rising Power":r["Rising Power"]||"",
+        "Cospower":r.Cospower||"", "Hithium":r.Hithium||""
+      }));
+      COMP_EXTRA = comp;  // keep full component rows (with Model/Country/Warranty) for the component table
+      comp.forEach(r=>rows.push({
+        Section:"Component", Category:"Component Makes", Parameter:r.Component||"",
+        Unit:"", "NETC":r.NETC||"", "Rising Power":r["Rising Power"]||"",
+        "Cospower":r.Cospower||"", "Hithium":r.Hithium||""
+      }));
+      DATA=rows;
+      if(!DATA.length){ showError("Both CSVs are empty. Run make_csv.py to regenerate them."); return; }
       document.getElementById("statusBox").classList.add("hide");
       render();
-    },
-    error:(e)=>showError("Could not load data.csv — "+e.message+". Make sure data.csv sits next to index.html.")
-  });
+    })
+    .catch(e=>showError("Could not load CSVs — "+(e.message||e)+
+      ". Make sure technical.csv and component.csv sit next to index.html (run make_csv.py)."));
 }
 
 function showError(msg){
@@ -344,18 +364,26 @@ function cellHTML(v){
 function escapeHTML(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 function buildComponentTable(){
-  const rows=DATA.filter(r=>r.Section==="Component");
+  const rows = COMP_EXTRA.length ? COMP_EXTRA : DATA.filter(r=>r.Section==="Component");
+  const extra=['In-house / Bought-out','Model No.','Country','Warranty'];
   const thead=document.querySelector('#compTable thead');
   const tbody=document.querySelector('#compTable tbody');
-  thead.innerHTML='<tr><th>Component</th>'+VENDORS.map(v=>`<th style="color:${VCOLORS[v]}">${v}</th>`).join('')+'</tr>';
+  thead.innerHTML='<tr><th>Component</th>'+
+    VENDORS.map(v=>`<th style="color:${VCOLORS[v]}">${v}</th>`).join('')+
+    extra.map(h=>`<th>${h}</th>`).join('')+'</tr>';
+  const ncols=1+VENDORS.length+extra.length;
   function draw(filter=""){
     const f=filter.toLowerCase();
     tbody.innerHTML=rows.filter(r=>{
       if(!f) return true;
-      return (r.Parameter+" "+VENDORS.map(v=>r[v]).join(" ")).toLowerCase().includes(f);
-    }).map(r=>`<tr><td class="param">${escapeHTML(r.Parameter)}</td>`+
-      VENDORS.map(v=>`<td>${cellHTML(r[v])}</td>`).join('')+`</tr>`).join('')
-      || `<tr><td colspan="${VENDORS.length+1}" class="status">No matches.</td></tr>`;
+      const name=r.Component||r.Parameter||"";
+      return (name+" "+VENDORS.map(v=>r[v]).join(" ")+" "+extra.map(k=>r[k]||"").join(" ")).toLowerCase().includes(f);
+    }).map(r=>{
+      const name=r.Component||r.Parameter||"";
+      return `<tr><td class="param">${escapeHTML(name)}</td>`+
+        VENDORS.map(v=>`<td>${cellHTML(r[v])}</td>`).join('')+
+        extra.map(k=>`<td>${cellHTML(r[k])}</td>`).join('')+`</tr>`;
+    }).join('') || `<tr><td colspan="${ncols}" class="status">No matches.</td></tr>`;
   }
   draw();
   document.getElementById('compSearch').oninput=e=>draw(e.target.value);
