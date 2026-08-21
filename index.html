@@ -201,8 +201,15 @@
 </div>
 
 <script>
-const VENDORS = ["NETC","Rising Power","Cospower","Hithium"];
-const VCOLORS  = {"NETC":"#3fb6a8","Rising Power":"#6c8cff","Cospower":"#f2a43a","Hithium":"#e5734f"};
+// Vendors are detected from the CSV headers at load time — not hardcoded.
+// Any column that isn't one of these fixed/meta columns is treated as a vendor.
+const NON_VENDOR = new Set([
+  "Section","Category","Parameter","Unit","Component","Sr No",
+  "In-house / Bought-out","Model No.","Country","Warranty"
+]);
+const PALETTE = ["#3fb6a8","#6c8cff","#f2a43a","#e5734f","#a978e0","#4fb0e5","#d8b24a","#6cc47a"];
+let VENDORS = [];
+let VCOLORS = {};
 let DATA = [];
 let COMP_EXTRA = [];
 let charts = {};
@@ -223,19 +230,34 @@ function parseCSV(url){
 function loadData(){
   Promise.all([ parseCSV("technical.csv"), parseCSV("component.csv") ])
     .then(([tech, comp])=>{
-      // Normalise both files into one internal shape the rest of the app uses.
+      // --- Detect vendors from the CSV column headers (union of both files) ---
+      const headerCols = new Set();
+      [tech, comp].forEach(arr=>{
+        if(arr.length) Object.keys(arr[0]).forEach(k=>headerCols.add(k.trim()));
+      });
+      let candidates = [...headerCols].filter(c=>!NON_VENDOR.has(c));
+
+      // Keep only vendors that actually have at least one non-blank value.
+      const hasData = {};
+      candidates.forEach(v=>hasData[v]=false);
+      [tech, comp].forEach(arr=>arr.forEach(r=>{
+        candidates.forEach(v=>{ if(!isBlank(r[v])) hasData[v]=true; });
+      }));
+      VENDORS = candidates.filter(v=>hasData[v]);
+      if(!VENDORS.length) VENDORS = candidates; // fallback: show columns even if all blank
+      VENDORS.forEach((v,i)=>VCOLORS[v]=PALETTE[i % PALETTE.length]);
+
+      // --- Normalise both files into one internal shape ---
       const rows=[];
-      tech.forEach(r=>rows.push({
-        Section:"Technical", Category:r.Category||"", Parameter:r.Parameter||"",
-        Unit:r.Unit||"", "NETC":r.NETC||"", "Rising Power":r["Rising Power"]||"",
-        "Cospower":r.Cospower||"", "Hithium":r.Hithium||""
-      }));
-      COMP_EXTRA = comp;  // keep full component rows (with Model/Country/Warranty) for the component table
-      comp.forEach(r=>rows.push({
-        Section:"Component", Category:"Component Makes", Parameter:r.Component||"",
-        Unit:"", "NETC":r.NETC||"", "Rising Power":r["Rising Power"]||"",
-        "Cospower":r.Cospower||"", "Hithium":r.Hithium||""
-      }));
+      tech.forEach(r=>{
+        const o={Section:"Technical",Category:r.Category||"",Parameter:r.Parameter||"",Unit:r.Unit||""};
+        VENDORS.forEach(v=>o[v]=r[v]||""); rows.push(o);
+      });
+      COMP_EXTRA = comp;
+      comp.forEach(r=>{
+        const o={Section:"Component",Category:"Component Makes",Parameter:r.Component||"",Unit:""};
+        VENDORS.forEach(v=>o[v]=r[v]||""); rows.push(o);
+      });
       DATA=rows;
       if(!DATA.length){ showError("Both CSVs are empty. Run make_csv.py to regenerate them."); return; }
       document.getElementById("statusBox").classList.add("hide");
