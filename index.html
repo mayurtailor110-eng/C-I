@@ -201,70 +201,96 @@
 </div>
 
 <script>
-// Vendors are detected from the CSV headers at load time — not hardcoded.
-// Any column that isn't one of these fixed/meta columns is treated as a vendor.
-const NON_VENDOR = new Set([
-  "Section","Category","Parameter","Unit","Component","Sr No",
-  "In-house / Bought-out","Model No.","Country","Warranty"
-]);
+// Everything is driven by the CSV columns — nothing about vendors or extra
+// component columns is hardcoded. Fixed structural columns are listed so the
+// rest can be inferred as vendors / extra attributes.
+const TECH_META = new Set(["Category","Parameter","Unit","Remarks"]);
+const COMP_FIXED = new Set(["Sr No","Component"]);
+// Known extra attribute columns (shown after vendors, if present in the CSV):
+const COMP_EXTRA_KNOWN = ["In-house / Bought-out","Model No.","Country","Warranty"];
 const PALETTE = ["#3fb6a8","#6c8cff","#f2a43a","#e5734f","#a978e0","#4fb0e5","#d8b24a","#6cc47a"];
-let VENDORS = [];
+let VENDORS = [];        // detected vendor columns that have data
 let VCOLORS = {};
-let DATA = [];
-let COMP_EXTRA = [];
+let DATA = [];           // normalised rows for charts/scorecard
+let COMP_ROWS = [];      // raw component rows (as in CSV)
+let COMP_EXTRA_COLS = [];// extra attribute columns actually present in component.csv
 let charts = {};
 
 function isBlank(v){ return v===undefined || v===null || String(v).trim()===""; }
+function stripBOM(s){ return typeof s==="string" ? s.replace(/^\uFEFF/,"") : s; }
 
 function parseCSV(url){
-  return new Promise((resolve,reject)=>{
-    Papa.parse(url,{download:true,header:true,skipEmptyLines:true,
-      complete:res=>resolve(res.data.map(r=>{
-        const o={};Object.keys(r).forEach(k=>o[k.trim()]=(r[k]==null?"":String(r[k]).trim()));return o;
-      })),
-      error:err=>reject(err)
+  return new Promise((resolve)=>{
+    Papa.parse(url,{download:true,header:true,skipEmptyLines:"greedy",
+      complete:res=>{
+        const rows=(res.data||[]).map(r=>{
+          const o={};
+          Object.keys(r).forEach(k=>{
+            const key=stripBOM(String(k)).trim();
+            if(key!=="") o[key]=(r[k]==null?"":String(r[k]).trim());
+          });
+          return o;
+        }).filter(o=>Object.values(o).some(v=>!isBlank(v))); // drop fully-empty rows
+        resolve({ok:true, rows});
+      },
+      error:err=>resolve({ok:false, rows:[], err})
     });
   });
 }
 
 function loadData(){
   Promise.all([ parseCSV("technical.csv"), parseCSV("component.csv") ])
-    .then(([tech, comp])=>{
-      // --- Detect vendors from the CSV column headers (union of both files) ---
-      const headerCols = new Set();
-      [tech, comp].forEach(arr=>{
-        if(arr.length) Object.keys(arr[0]).forEach(k=>headerCols.add(k.trim()));
-      });
-      let candidates = [...headerCols].filter(c=>!NON_VENDOR.has(c));
+    .then(([techRes, compRes])=>{
+      const tech = techRes.rows, comp = compRes.rows;
 
-      // Keep only vendors that actually have at least one non-blank value.
+      if(!techRes.ok && !compRes.ok){
+        showError("Couldn't load technical.csv or component.csv. Put both next to index.html and serve over http (see README)."); return;
+      }
+      if(!tech.length && !comp.length){
+        showError("Both CSVs are present but empty. Add data and reload."); return;
+      }
+
+      // --- Detect vendor columns (union across both files) ---
+      const techCols = tech.length ? Object.keys(tech[0]) : [];
+      const compCols = comp.length ? Object.keys(comp[0]) : [];
+      const techVendorCols = techCols.filter(c=>!TECH_META.has(c));
+      const compVendorCols = compCols.filter(c=>!COMP_FIXED.has(c) && !COMP_EXTRA_KNOWN.includes(c));
+      const vendorSet = [];
+      [...techVendorCols, ...compVendorCols].forEach(v=>{ if(!vendorSet.includes(v)) vendorSet.push(v); });
+
+      // keep only vendors with at least one non-blank value anywhere
       const hasData = {};
-      candidates.forEach(v=>hasData[v]=false);
-      [tech, comp].forEach(arr=>arr.forEach(r=>{
-        candidates.forEach(v=>{ if(!isBlank(r[v])) hasData[v]=true; });
-      }));
-      VENDORS = candidates.filter(v=>hasData[v]);
-      if(!VENDORS.length) VENDORS = candidates; // fallback: show columns even if all blank
+      vendorSet.forEach(v=>hasData[v]=false);
+      tech.forEach(r=>vendorSet.forEach(v=>{ if(!isBlank(r[v])) hasData[v]=true; }));
+      comp.forEach(r=>vendorSet.forEach(v=>{ if(!isBlank(r[v])) hasData[v]=true; }));
+      VENDORS = vendorSet.filter(v=>hasData[v]);
+      if(!VENDORS.length) VENDORS = vendorSet;      // fallback: show headers even if blank
+      VCOLORS = {};
       VENDORS.forEach((v,i)=>VCOLORS[v]=PALETTE[i % PALETTE.length]);
 
-      // --- Normalise both files into one internal shape ---
+      // --- Detect which extra component attribute columns actually exist AND have data ---
+      COMP_EXTRA_COLS = COMP_EXTRA_KNOWN.filter(col=>
+        compCols.includes(col) && comp.some(r=>!isBlank(r[col]))
+      );
+
+      COMP_ROWS = comp;
+
+      // --- Normalise into one shape for charts/scorecard ---
       const rows=[];
       tech.forEach(r=>{
         const o={Section:"Technical",Category:r.Category||"",Parameter:r.Parameter||"",Unit:r.Unit||""};
         VENDORS.forEach(v=>o[v]=r[v]||""); rows.push(o);
       });
-      COMP_EXTRA = comp;
       comp.forEach(r=>{
         const o={Section:"Component",Category:"Component Makes",Parameter:r.Component||"",Unit:""};
         VENDORS.forEach(v=>o[v]=r[v]||""); rows.push(o);
       });
       DATA=rows;
-      if(!DATA.length){ showError("Both CSVs are empty. Run make_csv.py to regenerate them."); return; }
+
       document.getElementById("statusBox").classList.add("hide");
-      render();
-    })
-    .catch(e=>showError("Could not load CSVs — "+(e.message||e)+
-      ". Make sure technical.csv and component.csv sit next to index.html (run make_csv.py)."));
+      try{ render(); }
+      catch(e){ showError("Rendered with an error: "+(e.message||e)); console.error(e); }
+    });
 }
 
 function showError(msg){
@@ -386,26 +412,29 @@ function cellHTML(v){
 function escapeHTML(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 function buildComponentTable(){
-  const rows = COMP_EXTRA.length ? COMP_EXTRA : DATA.filter(r=>r.Section==="Component");
-  const extra=['In-house / Bought-out','Model No.','Country','Warranty'];
+  const rows = COMP_ROWS.length ? COMP_ROWS : DATA.filter(r=>r.Section==="Component");
+  const extra = COMP_EXTRA_COLS;               // only extra columns that exist AND have data
   const thead=document.querySelector('#compTable thead');
   const tbody=document.querySelector('#compTable tbody');
   thead.innerHTML='<tr><th>Component</th>'+
-    VENDORS.map(v=>`<th style="color:${VCOLORS[v]}">${v}</th>`).join('')+
-    extra.map(h=>`<th>${h}</th>`).join('')+'</tr>';
+    VENDORS.map(v=>`<th style="color:${VCOLORS[v]}">${escapeHTML(v)}</th>`).join('')+
+    extra.map(h=>`<th>${escapeHTML(h)}</th>`).join('')+'</tr>';
   const ncols=1+VENDORS.length+extra.length;
   function draw(filter=""){
     const f=filter.toLowerCase();
-    tbody.innerHTML=rows.filter(r=>{
-      if(!f) return true;
+    const body=rows.filter(r=>{
       const name=r.Component||r.Parameter||"";
-      return (name+" "+VENDORS.map(v=>r[v]).join(" ")+" "+extra.map(k=>r[k]||"").join(" ")).toLowerCase().includes(f);
+      if(!name) return false;
+      if(!f) return true;
+      const hay=name+" "+VENDORS.map(v=>r[v]||"").join(" ")+" "+extra.map(k=>r[k]||"").join(" ");
+      return hay.toLowerCase().includes(f);
     }).map(r=>{
       const name=r.Component||r.Parameter||"";
       return `<tr><td class="param">${escapeHTML(name)}</td>`+
         VENDORS.map(v=>`<td>${cellHTML(r[v])}</td>`).join('')+
         extra.map(k=>`<td>${cellHTML(r[k])}</td>`).join('')+`</tr>`;
-    }).join('') || `<tr><td colspan="${ncols}" class="status">No matches.</td></tr>`;
+    }).join('');
+    tbody.innerHTML=body || `<tr><td colspan="${ncols}" class="status">No matches.</td></tr>`;
   }
   draw();
   document.getElementById('compSearch').oninput=e=>draw(e.target.value);
